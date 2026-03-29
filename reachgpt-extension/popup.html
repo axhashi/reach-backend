@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #09090b;
+      --surface: #111116;
+      --surface2: #18181f;
+      --border: #27272a;
+      --border2: #3f3f46;
+      --accent: #6366f1;
+      --accent-light: rgba(99,102,241,0.12);
+      --accent-dim: #818cf8;
+      --text: #fafafa;
+      --text2: #a1a1aa;
+      --text3: #52525b;
+      --green: #4ade80;
+      --green-bg: rgba(74,222,128,0.08);
+      --red: #f87171;
+      --red-bg: rgba(248,113,113,0.08);
+    }
+
+    body {
+      width: 360px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .hdr {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .logo { display: flex; align-items: center; gap: 7px; }
+
+    .logo-mark {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 700;
+    }
+
+    .logo-name { font-weight: 600; font-size: 14px; letter-spacing: -0.3px; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 5px;
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 1px; color: var(--green);
+      background: var(--green-bg);
+      border: 1px solid rgba(74,222,128,0.15);
+      padding: 3px 8px; border-radius: 100px;
+    }
+
+    .status-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green); animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* States */
+    .state { display: none; padding: 16px; }
+    .state.active { display: block; }
+
+    /* Wrong page */
+    .wp-icon { font-size: 32px; text-align: center; margin-bottom: 12px; display: block; }
+    .wp-title { font-size: 14px; font-weight: 600; text-align: center; margin-bottom: 8px; }
+    .wp-desc { font-size: 12px; color: var(--text2); text-align: center; line-height: 1.6; margin-bottom: 16px; }
+    .wp-url {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 12px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; color: var(--accent-dim); text-align: center; letter-spacing: 0.5px;
+    }
+
+    /* Loading */
+    .loading-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 28px 16px; gap: 10px;
+    }
+
+    .spinner {
+      width: 22px; height: 22px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 12px; color: var(--text2); }
+
+    /* Prospect card */
+    .prospect-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent);
+      border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .prospect-av {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 700; flex-shrink: 0;
+    }
+
+    .prospect-name { font-size: 13px; font-weight: 600; margin-bottom: 1px; }
+    .prospect-title { font-size: 10px; color: var(--text3); line-height: 1.4; }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+    .chip {
+      font-size: 9px; color: var(--green);
+      background: var(--green-bg);
+      border: 1px solid rgba(74,222,128,0.12);
+      padding: 3px 8px; border-radius: 100px;
+    }
+
+    /* Fields */
+    .field { margin-bottom: 12px; }
+
+    .field-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 1.5px; color: var(--accent-dim);
+      text-transform: uppercase; margin-bottom: 5px; display: block;
+    }
+
+    .field-hint { font-size: 10px; color: var(--text3); margin-bottom: 5px; line-height: 1.5; }
+
+    textarea, input[type="text"], input[type="password"] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      padding: 9px 11px;
+      width: 100%; outline: none; resize: none;
+      border-radius: 7px; transition: border-color 0.15s; line-height: 1.5;
+    }
+
+    textarea:focus, input:focus { border-color: var(--accent); }
+    textarea::placeholder, input::placeholder { color: var(--text3); }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #818cf8);
+      color: white; font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 600;
+      border: none; padding: 11px; border-radius: 8px; cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+      box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-secondary {
+      width: 100%; background: var(--surface); color: var(--text2);
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border); padding: 9px; border-radius: 8px;
+      cursor: pointer; transition: all 0.15s; margin-top: 8px;
+    }
+
+    .btn-secondary:hover { color: var(--text); border-color: var(--border2); }
+
+    /* Error */
+    .err-box {
+      background: var(--red-bg); border: 1px solid rgba(248,113,113,0.2);
+      border-radius: 7px; padding: 9px 11px;
+      font-size: 11px; color: var(--red); line-height: 1.5; margin-top: 10px;
+    }
+
+    /* Generating steps */
+    .gen-steps { display: flex; flex-direction: column; gap: 10px; padding: 8px 0; }
+
+    .gen-step {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px; color: var(--text3);
+    }
+
+    .gen-step.active { color: var(--text2); }
+    .gen-step.done { color: var(--text3); }
+
+    .gen-step-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; flex-shrink: 0; color: var(--text3);
+    }
+
+    .gen-step.active .gen-step-icon { border-color: var(--accent); color: var(--accent); }
+    .gen-step.done .gen-step-icon {
+      background: rgba(74,222,128,0.1);
+      border-color: rgba(74,222,128,0.3); color: var(--green);
+    }
+
+    /* Result */
+    .result-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .result-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 1.5px; color: var(--accent-dim); text-transform: uppercase;
+    }
+
+    .btn-copy {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 1px; font-weight: 700;
+      color: var(--text2); background: var(--surface2);
+      border: 1px solid var(--border); padding: 4px 10px;
+      border-radius: 5px; cursor: pointer; text-transform: uppercase; transition: all 0.15s;
+    }
+
+    .btn-copy:hover { color: var(--accent-dim); border-color: var(--accent); }
+    .btn-copy.copied { color: var(--green); border-color: rgba(74,222,128,0.4); background: var(--green-bg); }
+
+    .subj-lbl {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: 1px; color: var(--text3);
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+
+    .subj-val {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      margin-bottom: 12px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border); line-height: 1.4;
+    }
+
+    .email-body {
+      font-size: 11.5px; line-height: 1.8; color: var(--text2);
+      white-space: pre-wrap; max-height: 220px; overflow-y: auto;
+    }
+
+    .email-body::-webkit-scrollbar { width: 3px; }
+    .email-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+    .key-saved {
+      font-size: 10px; color: var(--green); margin-top: 4px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-mark">R</div>
+      <span class="logo-name">Reach</span>
+    </div>
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      LIVE
+    </div>
+  </div>
+
+  <!-- Wrong page -->
+  <div class="state" id="state-wrongpage">
+    <span class="wp-icon">🔗</span>
+    <div class="wp-title">Open a LinkedIn profile first</div>
+    <div class="wp-desc">Navigate to any LinkedIn profile, then click this extension.</div>
+    <div class="wp-url">linkedin.com/in/anyprofile</div>
+  </div>
+
+  <!-- Loading -->
+  <div class="state" id="state-loading">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-text">Reading profile...</div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="state" id="state-form">
+
+    <div class="prospect-card">
+      <div id="prospect-av" class="prospect-av">?</div>
+      <div>
+        <div id="prospect-name" class="prospect-name">Loading...</div>
+        <div id="prospect-title" class="prospect-title"></div>
+      </div>
+    </div>
+
+    <div id="signals-wrap" style="display:none">
+      <div class="chips" id="signals-row"></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Your Pitch</label>
+      <p class="field-hint">What are you selling? 1–3 sentences.</p>
+      <textarea id="pitch-input" rows="3" placeholder="We help dental practices recover denied insurance claims automatically..."></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Anthropic API Key</label>
+      <p class="field-hint">Saved locally in your browser. Never sent anywhere else.</p>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+      <div class="key-saved" id="key-saved">✓ Key saved</div>
+    </div>
+
+    <div id="form-error" class="err-box" style="display:none"></div>
+
+    <button class="btn-primary" id="generate-btn">Generate Email →</button>
+  </div>
+
+  <!-- Generating -->
+  <div class="state" id="state-generating">
+    <div class="gen-steps">
+      <div class="gen-step" id="step-1"><div class="gen-step-icon">1</div>Reading profile signals</div>
+      <div class="gen-step" id="step-2"><div class="gen-step-icon">2</div>Analyzing recent activity</div>
+      <div class="gen-step" id="step-3"><div class="gen-step-icon">3</div>Writing personalized email</div>
+      <div class="gen-step" id="step-4"><div class="gen-step-icon">4</div>Polishing subject line</div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="state" id="state-result">
+    <div class="result-header">
+      <span id="result-label" class="result-label">EMAIL READY</span>
+      <button class="btn-copy" id="copy-btn">COPY</button>
+    </div>
+    <div class="subj-lbl">Subject</div>
+    <div id="result-subject" class="subj-val"></div>
+    <div id="result-email" class="email-body"></div>
+    <hr class="divider" />
+    <button class="btn-secondary" id="back-btn">← Generate another</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
