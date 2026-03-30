@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-
 require('dotenv').config();
 
 const app = express();
@@ -9,13 +8,6 @@ app.use(cors());
 app.use(express.json());
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Simple in-memory credit store
-const users = {};
-function getUser(email) {
-  if (!users[email]) users[email] = { credits: 5 };
-  return users[email];
-}
 
 function parseEmail(text) {
   const lines = text.split('\n');
@@ -32,48 +24,38 @@ function parseEmail(text) {
 
 app.get('/', (req, res) => res.json({ status: 'ReachGPT API running' }));
 
-app.get('/credits', (req, res) => {
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ error: 'Email required' });
-  res.json({ credits: getUser(email).credits });
-});
-
 app.post('/generate', async (req, res) => {
-  const { email, profileData, pitch } = req.body;
-  if (!profileData || !pitch) return res.status(400).json({ error: 'Missing fields: profileData and pitch required' });
+  const { profileData, pitch } = req.body;
+  if (!profileData || !pitch) return res.status(400).json({ error: 'Missing profileData and pitch' });
 
-  const user = getUser(email || 'anonymous');
-  if (user.credits <= 0) return res.status(402).json({ error: 'No credits remaining.', credits: 0 });
-
-  const { name, headline, location, experiences, posts, about } = profileData;
+  const { name, rawText } = profileData;
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5',
       max_tokens: 1000,
-      system: `You are ReachGPT, a cold email assistant. Use ONLY the real scraped data provided — never invent or guess signals.
+      system: `You are ReachGPT, a cold email assistant. You will receive raw text scraped from a LinkedIn profile page and a product pitch.
 
-IMPORTANT: If recent posts are provided, you MUST open the email with a specific hook tied to something from those posts. Quote or reference their actual words or activity. This is what makes the email feel researched.
+Extract the key signals from the profile text: job title, company, recent posts, certifications, career changes.
 
-If no posts are available, use their job title, company, and experience as the hook instead.
+Then write a hyper-personalized cold email that opens with a SPECIFIC hook from something real on their profile.
 
-NEVER write generic openers like "I noticed your profile" or "I came across your background." Always be specific.
+NEVER write generic openers like "I noticed your profile" — always reference something specific.
 
-Respond in this EXACT plain text format — nothing else:
-SUBJECT: [compelling subject line tied to a real signal]
-SIGNAL: [specific real thing from their posts or profile]
-SIGNAL: [another specific real signal]
-SIGNAL: [another specific real signal]
+Respond in this EXACT plain text format:
+SUBJECT: [subject line]
+SIGNAL: [specific real thing from their profile]
+SIGNAL: [another signal]
+SIGNAL: [another signal]
 EMAIL:
-[4 short paragraphs, under 150 words, first line references something real and specific, ends with soft CTA, sign off as [Your name]]`,
+[4 short paragraphs under 150 words, specific opening hook, soft CTA, sign off as [Your name]]`,
       messages: [{
         role: 'user',
-        content: `Name: ${name || 'Unknown'}
-Headline: ${headline || ''}
-Location: ${location || ''}
-Experience: ${(experiences || []).join('; ')}
-About: ${about || ''}
-Recent posts: ${(posts || []).map((p, i) => `Post ${i+1}: "${p}"`).join('\n') || 'None'}
+        content: `Profile name: ${name || 'Unknown'}
+Profile URL: ${profileData.profileUrl || ''}
+
+Raw profile text:
+${rawText || 'No profile text available'}
 
 My pitch: ${pitch}`
       }]
@@ -81,12 +63,13 @@ My pitch: ${pitch}`
 
     const raw = message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
     const parsed = parseEmail(raw);
-    if (!parsed.email) return res.status(500).json({ error: 'Generation failed' });
+    if (!parsed.email) return res.status(500).json({ error: 'Generation failed — empty response' });
 
-    user.credits -= 1;
-    res.json({ ...parsed, creditsRemaining: user.credits });
+    res.json({ ...parsed });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error:', err.message);
+    res.status(500).json({ error: err.message, status: err.status });
   }
 });
 
