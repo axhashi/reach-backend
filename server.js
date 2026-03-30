@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
+
 require('dotenv').config();
 
 const app = express();
@@ -9,6 +10,7 @@ app.use(express.json());
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Simple in-memory credit store
 const users = {};
 function getUser(email) {
   if (!users[email]) users[email] = { credits: 5 };
@@ -38,16 +40,16 @@ app.get('/credits', (req, res) => {
 
 app.post('/generate', async (req, res) => {
   const { email, profileData, pitch } = req.body;
-  if (!email || !profileData || !pitch) return res.status(400).json({ error: 'Missing fields' });
+  if (!profileData || !pitch) return res.status(400).json({ error: 'Missing fields: profileData and pitch required' });
 
-  const user = getUser(email);
+  const user = getUser(email || 'anonymous');
   if (user.credits <= 0) return res.status(402).json({ error: 'No credits remaining.', credits: 0 });
 
   const { name, headline, location, experiences, posts, about } = profileData;
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
       system: `You are ReachGPT, a cold email assistant. Use ONLY the real scraped data provided — never invent or guess signals.
 
@@ -72,24 +74,19 @@ Location: ${location || ''}
 Experience: ${(experiences || []).join('; ')}
 About: ${about || ''}
 Recent posts: ${(posts || []).map((p, i) => `Post ${i+1}: "${p}"`).join('\n') || 'None'}
+
 My pitch: ${pitch}`
       }]
     });
 
     const raw = message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
     const parsed = parseEmail(raw);
-    if (!parsed.email) return res.status(500).json({ error: 'Generation failed — empty response' });
+    if (!parsed.email) return res.status(500).json({ error: 'Generation failed' });
 
     user.credits -= 1;
     res.json({ ...parsed, creditsRemaining: user.credits });
-
   } catch (err) {
-    console.error('Anthropic error:', err);
-    res.status(500).json({
-      error: err.message || 'Generation failed',
-      type: err.constructor?.name,
-      details: err.status || err.code || ''
-    });
+    res.status(500).json({ error: err.message });
   }
 });
 
