@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
-
 require('dotenv').config();
 
 const app = express();
@@ -10,7 +9,6 @@ app.use(express.json());
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Simple in-memory credit store
 const users = {};
 function getUser(email) {
   if (!users[email]) users[email] = { credits: 5 };
@@ -49,7 +47,7 @@ app.post('/generate', async (req, res) => {
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5',
       max_tokens: 1000,
       system: `You are ReachGPT, a cold email assistant. Use ONLY the real scraped data provided — never invent or guess signals.
 
@@ -74,19 +72,24 @@ Location: ${location || ''}
 Experience: ${(experiences || []).join('; ')}
 About: ${about || ''}
 Recent posts: ${(posts || []).map((p, i) => `Post ${i+1}: "${p}"`).join('\n') || 'None'}
-
 My pitch: ${pitch}`
       }]
     });
 
     const raw = message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
     const parsed = parseEmail(raw);
-    if (!parsed.email) return res.status(500).json({ error: 'Generation failed' });
+    if (!parsed.email) return res.status(500).json({ error: 'Generation failed — empty response' });
 
     user.credits -= 1;
     res.json({ ...parsed, creditsRemaining: user.credits });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Anthropic error:', err);
+    res.status(500).json({
+      error: err.message || 'Generation failed',
+      type: err.constructor?.name,
+      details: err.status || err.code || ''
+    });
   }
 });
 
