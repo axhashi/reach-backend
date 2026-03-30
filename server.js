@@ -10,6 +10,7 @@ app.use(express.json());
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Simple in-memory credit store
 const users = {};
 function getUser(email) {
   if (!users[email]) users[email] = { credits: 5 };
@@ -50,15 +51,21 @@ app.post('/generate', async (req, res) => {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
-      system: `You are ReachGPT, a cold email assistant. Use ONLY the real scraped data — never invent signals.
+      system: `You are ReachGPT, a cold email assistant. Use ONLY the real scraped data provided — never invent or guess signals.
 
-Respond in this EXACT plain text format:
-SUBJECT: [subject line]
-SIGNAL: [real signal from their profile]
-SIGNAL: [another real signal]
-SIGNAL: [another real signal]
+IMPORTANT: If recent posts are provided, you MUST open the email with a specific hook tied to something from those posts. Quote or reference their actual words or activity. This is what makes the email feel researched.
+
+If no posts are available, use their job title, company, and experience as the hook instead.
+
+NEVER write generic openers like "I noticed your profile" or "I came across your background." Always be specific.
+
+Respond in this EXACT plain text format — nothing else:
+SUBJECT: [compelling subject line tied to a real signal]
+SIGNAL: [specific real thing from their posts or profile]
+SIGNAL: [another specific real signal]
+SIGNAL: [another specific real signal]
 EMAIL:
-[4 short paragraphs, under 150 words, opens with hook from real data, ends with soft CTA, sign off as [Your name]]`,
+[4 short paragraphs, under 150 words, first line references something real and specific, ends with soft CTA, sign off as [Your name]]`,
       messages: [{
         role: 'user',
         content: `Name: ${name || 'Unknown'}
