@@ -1,77 +1,105 @@
 const express = require('express');
-const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-function parseEmail(text) {
-  const lines = text.split('\n');
-  let subject = '', signals = [], emailLines = [], inEmail = false;
-  for (const line of lines) {
-    const t = line.trim();
-    if (t.toUpperCase().startsWith('SUBJECT:')) subject = t.replace(/^SUBJECT:\s*/i, '').trim();
-    else if (t.toUpperCase().startsWith('SIGNAL:')) signals.push(t.replace(/^SIGNAL:\s*/i, '').trim());
-    else if (t.toUpperCase() === 'EMAIL:') inEmail = true;
-    else if (inEmail) emailLines.push(line);
-  }
-  return { subject: subject || 'Quick note', signals, email: emailLines.join('\n').trim() };
-}
+// Health check
+app.get('/', (req, res) => {
+  res.json({ status: 'Sage API running' });
+});
 
-app.get('/', (req, res) => res.json({ status: 'ReachGPT API running' }));
-
+// Original ReachGPT endpoint — keep working
 app.post('/generate', async (req, res) => {
-  const { profileData, pitch } = req.body;
-  if (!profileData || !pitch) return res.status(400).json({ error: 'Missing profileData and pitch' });
-
-  const { name, rawText } = profileData;
-
   try {
+    const { rawText, pitch } = req.body;
+
+    if (!rawText || rawText.length < 50) {
+      return res.status(400).json({ error: 'Not enough profile data' });
+    }
+
+    const prompt = `You are an expert cold email writer. A salesperson is viewing a LinkedIn profile and wants to send a personalized cold email.
+
+PROFILE DATA (raw page text):
+${rawText.slice(0, 6000)}
+
+THEIR PITCH:
+${pitch || 'No pitch provided'}
+
+Write a personalized cold email. Use real signals from the profile. Keep it under 150 words. Be specific, not generic.
+
+Respond in this exact format:
+SUBJECT: [subject line]
+SIGNAL: [one specific thing from their profile you referenced]
+EMAIL:
+[the full email]`;
+
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
-      max_tokens: 1000,
-      system: `You are ReachGPT, a cold email assistant. You will receive raw text scraped from a LinkedIn profile page and a product pitch.
-
-Extract the key signals from the profile text: job title, company, recent posts, certifications, career changes.
-
-Then write a hyper-personalized cold email that opens with a SPECIFIC hook from something real on their profile.
-
-NEVER write generic openers like "I noticed your profile" — always reference something specific.
-
-Respond in this EXACT plain text format:
-SUBJECT: [subject line]
-SIGNAL: [specific real thing from their profile]
-SIGNAL: [another signal]
-SIGNAL: [another signal]
-EMAIL:
-[4 short paragraphs under 150 words, specific opening hook, soft CTA, sign off as [Your name]]`,
-      messages: [{
-        role: 'user',
-        content: `Profile name: ${name || 'Unknown'}
-Profile URL: ${profileData.profileUrl || ''}
-
-Raw profile text:
-${rawText || 'No profile text available'}
-
-My pitch: ${pitch}`
-      }]
+      max_tokens: 600,
+      messages: [{ role: 'user', content: prompt }]
     });
 
-    const raw = message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-    const parsed = parseEmail(raw);
-    if (!parsed.email) return res.status(500).json({ error: 'Generation failed — empty response' });
-
-    res.json({ ...parsed });
+    const text = message.content[0].text;
+    res.json({ output: text });
 
   } catch (err) {
-    console.error('Error:', err.message);
-    res.status(500).json({ error: err.message, status: err.status });
+    console.error('Generate error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`ReachGPT API running on port ${PORT}`));
+// NEW: Sage universal endpoint — reads any webpage
+app.post('/sage', async (req, res) => {
+  try {
+    const { pageType, suggestedAction, userContext, rawText, url, title } = req.body;
+
+    if (!rawText || rawText.length < 50) {
+      return res.status(400).json({ error: 'Not enough page content to read' });
+    }
+
+    const prompt = `You are Sage — an AI that reads any webpage and generates the most useful professional action based on what's on that page.
+
+PAGE TYPE: ${pageType}
+PAGE URL: ${url}
+PAGE TITLE: ${title}
+SUGGESTED ACTION: ${suggestedAction}
+
+PAGE CONTENT (raw text from the page):
+${rawText.slice(0, 6000)}
+
+USER CONTEXT (who they are and what they want):
+${userContext || 'No context provided — use best judgment based on the page type'}
+
+INSTRUCTIONS:
+- Generate the most useful, specific, personalized professional output for this page
+- Use real information from the page — names, companies, specific details, recent work
+- Never be generic. If it's a job posting, reference the actual role and company. If it's a LinkedIn profile, reference their actual experience. If it's an investor page, reference their actual portfolio.
+- Keep it concise and immediately usable — under 200 words
+- For emails: include a subject line. For other outputs: format appropriately.
+- Sound human, warm, and specific — not like a template
+
+Generate the output now:`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 800,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const output = message.content[0].text;
+    res.json({ output });
+
+  } catch (err) {
+    console.error('Sage error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Sage API running on port ${PORT}`));
