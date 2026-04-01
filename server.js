@@ -77,14 +77,17 @@ USER CONTEXT (who they are and what they want):
 ${userContext || 'No context provided — use best judgment based on the page type'}
 
 INSTRUCTIONS:
-- Generate the most useful, specific, personalized professional output for this page
-- Use real information from the page — names, companies, specific details, recent work
-- Never be generic. If it's a job posting, reference the actual role and company. If it's a LinkedIn profile, reference their actual experience. If it's an investor page, reference their actual portfolio.
-- Keep it concise and immediately usable — under 200 words
-- For emails: include a subject line. For other outputs: format appropriately.
-- Sound human, warm, and specific — not like a template
+- Generate a personalized professional message using real details from the page
+- Never be generic — use actual names, companies, roles, achievements from the page
+- Keep it under 150 words
+- Output ONLY in this exact format — nothing else:
 
-Generate the output now:`;
+SUBJECT: [subject line here]
+EMAIL:
+[message body here — no labels, no headers, no explanations, no "WHY THIS WORKS" sections]
+[Your name]
+
+CRITICAL: Do NOT include any explanations, analysis, "WHY THIS WORKS" notes, bullet points about why the message works, or anything outside the SUBJECT and EMAIL fields. Output only the subject line and the message body. Nothing else.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
