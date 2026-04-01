@@ -63,31 +63,35 @@ app.post('/sage', async (req, res) => {
       return res.status(400).json({ error: 'Not enough page content to read' });
     }
 
-    const prompt = `You are Sage — an AI that reads any webpage and generates the most useful professional action based on what's on that page.
+    const prompt = `You are Sage — an AI that reads any webpage and delivers exactly what the user needs based on their context.
 
 PAGE TYPE: ${pageType}
 PAGE URL: ${url}
 PAGE TITLE: ${title}
-SUGGESTED ACTION: ${suggestedAction}
-
 PAGE CONTENT (raw text from the page):
 ${rawText.slice(0, 6000)}
 
-USER CONTEXT (who they are and what they want):
-${userContext || 'No context provided — use best judgment based on the page type'}
+USER CONTEXT (what they typed):
+${userContext || 'No context provided'}
 
 INSTRUCTIONS:
-- Generate a personalized professional message using real details from the page
-- Never be generic — use actual names, companies, roles, achievements from the page
-- Keep it under 150 words
-- Output ONLY in this exact format — nothing else:
+Read the user's context carefully and decide what they actually need:
 
-SUBJECT: [subject line here]
-EMAIL:
-[message body here — no labels, no headers, no explanations, no "WHY THIS WORKS" sections]
-[Your name]
+- If they describe who they are or what they're selling (e.g. "I'm a sales rep", "I'm applying for this job", "I'm a founder") → generate the most useful personalized professional action: cold email, cover letter, pitch email, recruiting message, etc.
 
-CRITICAL: Do NOT include any explanations, analysis, "WHY THIS WORKS" notes, bullet points about why the message works, or anything outside the SUBJECT and EMAIL fields. Output only the subject line and the message body. Nothing else.`;
+- If they ask a question or want to learn (e.g. "what does this mean", "teach me", "explain this", "why did this happen", "how does this work") → answer their question clearly and helpfully based on what's on the page. Be a teacher. Be conversational. Use simple language.
+
+- If they ask for a summary (e.g. "summarize", "tldr", "what is this about") → give a clear, concise summary of the page.
+
+- If they give any other instruction → fulfill it intelligently based on the page content.
+
+ALWAYS use real information from the page. Never be generic.
+
+For professional actions: output SUBJECT: [subject] then EMAIL: [clean message body only — no labels, no explanations, ends with [Your name]]
+
+For questions, explanations, summaries: just respond naturally and helpfully. No subject line needed.
+
+Keep all responses under 200 words. Be sharp, specific, and useful.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5',
