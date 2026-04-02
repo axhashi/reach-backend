@@ -14,6 +14,51 @@ app.get('/', (req, res) => {
   res.json({ status: 'Sage API running' });
 });
 
+// NEW: AI-generated suggestion — reads page and returns smart suggestion
+app.post('/suggest', async (req, res) => {
+  try {
+    const { rawText, url, title } = req.body;
+
+    if (!rawText || rawText.length < 30) {
+      return res.json({ suggestion: 'Generate the most useful professional action' });
+    }
+
+    const prompt = `You are Sage. Read this webpage and write ONE short sentence describing the single most useful thing you could do for the person viewing it.
+
+PAGE URL: ${url}
+PAGE TITLE: ${title}
+PAGE CONTENT (first 2000 chars):
+${rawText.slice(0, 2000)}
+
+INSTRUCTIONS:
+- Write exactly ONE sentence — max 12 words
+- Be specific to what's actually on this page
+- Think about what the viewer most likely wants to do
+- Examples:
+  - "Write a personalized cold email to this person"
+  - "Generate a tailored cover letter for this role"
+  - "Explain what this security vulnerability means and how to fix it"
+  - "Summarize the key points of this article"
+  - "Check your quiz answers and explain the concepts"
+  - "Write a pitch email to this investor based on their portfolio"
+  - "Compare this product's features and suggest if it's worth buying"
+- Output ONLY the one sentence. Nothing else. No quotes. No punctuation at the end except if needed.`;
+
+    const message = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 60,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const suggestion = message.content[0].text.trim();
+    res.json({ suggestion });
+
+  } catch (err) {
+    console.error('Suggest error:', err);
+    res.json({ suggestion: 'Generate the most useful action for this page' });
+  }
+});
+
 // Original ReachGPT endpoint — keep working
 app.post('/generate', async (req, res) => {
   try {
